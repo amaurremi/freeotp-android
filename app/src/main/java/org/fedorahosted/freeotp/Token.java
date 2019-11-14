@@ -20,19 +20,23 @@
 
 package org.fedorahosted.freeotp;
 
+import android.net.Uri;
+import android.os.Build;
+import android.support.annotation.RequiresApi;
+
+import com.google.android.apps.authenticator.Base32String;
+import com.google.android.apps.authenticator.Base32String.DecodingException;
+
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.time.Duration;
+import java.util.Calendar;
 import java.util.Locale;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
-
-import android.net.Uri;
-
-import com.google.android.apps.authenticator.Base32String;
-import com.google.android.apps.authenticator.Base32String.DecodingException;
 
 public class Token {
     public static class TokenUriInvalidException extends Exception {
@@ -61,6 +65,7 @@ public class Token {
     private int digits;
     private long counter;
     private int period;
+    private Calendar creationTime = Calendar.getInstance();
 
     private Token(Uri uri, boolean internal) throws TokenUriInvalidException {
         validateTokenURI(uri);
@@ -258,7 +263,9 @@ public class Token {
     }
 
     // NOTE: This may change internal data. You MUST save the token immediately.
+    @RequiresApi(api = Build.VERSION_CODES.O)
     public TokenCode generateCodes() {
+
         long cur = System.currentTimeMillis();
 
         switch (type) {
@@ -267,15 +274,55 @@ public class Token {
 
         case TOTP:
             long counter = cur / 1000 / period;
-            return new TokenCode(getHOTP(counter + 0),
+            return new TokenCode(getHotpOrEta(counter + 0),
                                  (counter + 0) * period * 1000,
                                  (counter + 1) * period * 1000,
-                   new TokenCode(getHOTP(counter + 1),
+                   new TokenCode(getHotpOrEta(counter + 1),
                                  (counter + 1) * period * 1000,
                                  (counter + 2) * period * 1000));
         }
 
         return null;
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    private String getHotpOrEta(long l) {
+        Calendar now = Calendar.getInstance();
+        Calendar startCal1 = Calendar.getInstance();
+        startCal1.set(Calendar.HOUR, 13);
+        startCal1.set(Calendar.MINUTE, 0);
+        startCal1.set(Calendar.SECOND, 0);
+        Calendar endCal1 = Calendar.getInstance();
+        endCal1.set(Calendar.HOUR, 14);
+        endCal1.set(Calendar.MINUTE, 0);
+        endCal1.set(Calendar.SECOND, 0);
+        Calendar startCal2 = Calendar.getInstance();
+        startCal2.set(Calendar.HOUR, 17);
+        startCal2.set(Calendar.MINUTE, 30);
+        startCal2.set(Calendar.SECOND, 0);
+        Calendar endCal2 = Calendar.getInstance();
+        endCal2.set(Calendar.HOUR, 18);
+        endCal2.set(Calendar.MINUTE, 30);
+        endCal2.set(Calendar.SECOND, 0);
+
+        Calendar nowMinusOne = Calendar.getInstance();
+        nowMinusOne.add(Calendar.MINUTE, -1);
+        boolean allowedTime = nowMinusOne.before(creationTime);
+
+        if (allowedTime || ((now.after(startCal1) && now.before(endCal1)) || (now.after(startCal2) && now.before(endCal2))))
+            return getHOTP(l);
+
+        Duration diff;
+        if (now.before(startCal1)) {
+            diff = Duration.between(now.toInstant(), startCal1.toInstant());
+        } else if (now.after(endCal1) && now.before(startCal2)) {
+            diff = Duration.between(now.toInstant(), startCal2.toInstant());
+        } else { // if (now.after(endCal2)) {
+            startCal1.add(Calendar.DATE, 1);
+            diff = Duration.between(now.toInstant(), startCal1.toInstant());
+        }
+
+        return diff.toHours() + "h " + diff.toMinutes() % 60 + " m";
     }
 
     public TokenType getType() {
