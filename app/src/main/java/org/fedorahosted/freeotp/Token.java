@@ -289,19 +289,19 @@ public class Token {
     private String getHotpOrEta(long l) {
         Calendar now = Calendar.getInstance();
         Calendar startCal1 = Calendar.getInstance();
-        startCal1.set(Calendar.HOUR, 13);
+        startCal1.set(Calendar.HOUR_OF_DAY, 13);
         startCal1.set(Calendar.MINUTE, 0);
         startCal1.set(Calendar.SECOND, 0);
         Calendar endCal1 = Calendar.getInstance();
-        endCal1.set(Calendar.HOUR, 14);
+        endCal1.set(Calendar.HOUR_OF_DAY, 14);
         endCal1.set(Calendar.MINUTE, 0);
         endCal1.set(Calendar.SECOND, 0);
         Calendar startCal2 = Calendar.getInstance();
-        startCal2.set(Calendar.HOUR, 17);
+        startCal2.set(Calendar.HOUR_OF_DAY, 17);
         startCal2.set(Calendar.MINUTE, 30);
         startCal2.set(Calendar.SECOND, 0);
         Calendar endCal2 = Calendar.getInstance();
-        endCal2.set(Calendar.HOUR, 18);
+        endCal2.set(Calendar.HOUR_OF_DAY, 18);
         endCal2.set(Calendar.MINUTE, 30);
         endCal2.set(Calendar.SECOND, 0);
 
